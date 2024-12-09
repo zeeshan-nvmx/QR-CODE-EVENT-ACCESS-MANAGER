@@ -1,0 +1,21 @@
+{
+  "name": "qr-code-event-access-manager",
+  "version": "1.0.0",
+  "description": "An event management api that will let event managers pregenerate qr codes, seed the database and print the qr codes to tickets or id cards so that they can be used to manage access to an event.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js"
+  },
+  "author": "Ashiqur Rahman Zeeshan",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.8.4",
+    "qrcode": "^1.5.4",
+    "react-qr-reader": "^3.0.0-beta-1",
+    "xlsx": "^0.18.5"
+  }
+}
