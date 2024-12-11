@@ -74,7 +74,7 @@ app.post('/api/scan', async (req, res) => {
     code.usedAt = new Date()
     await code.save()
 
-    res.json({ success: true })
+    res.json({ success: true, message: "access granted, enjoy" })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -93,7 +93,7 @@ app.post('/api/reset-code/:code', async (req, res) => {
     code.usedAt = null;
     await code.save();
 
-    res.json({ success: true });
+    res.json({ success: true, message: 'qr code has been successfully reset. You can use this qr code again to enter' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
