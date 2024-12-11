@@ -81,23 +81,24 @@ app.post('/api/scan', async (req, res) => {
 })
 
 // Reset QR code
-app.post('/api/reset-code/:codeNumber', async (req, res) => {
+app.post('/api/reset-code/:code', async (req, res) => {
   try {
-    const code = await QRCodeModel.findOne({ codeNumber: req.params.codeNumber })
+    const code = await QRCodeModel.findOne({ code: req.params.code });
 
     if (!code) {
-      return res.status(404).json({ success: false, message: 'Code not found' })
+      return res.status(404).json({ success: false, message: 'Code not found' });
     }
 
-    code.used = false
-    code.usedAt = null
-    await code.save()
+    code.used = false;
+    code.usedAt = null;
+    await code.save();
 
-    res.json({ success: true })
+    res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
+    res.status(500).json({ success: false, error: error.message });
   }
-})
+});
+
 
 app.get('/api/export-excel', async (req, res) => {
   try {
