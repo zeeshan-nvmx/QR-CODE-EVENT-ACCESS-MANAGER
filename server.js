@@ -63,11 +63,11 @@ app.post('/api/scan', async (req, res) => {
     const code = await QRCodeModel.findOne({ code: qrCode })
 
     if (!code) {
-      return res.json({ success: false, message: 'Invalid QR code' })
+      return res.json({ message: 'Invalid QR code' })
     }
 
     if (code.used) {
-      return res.json({ success: false, message: 'QR code already used' })
+      return res.json({ message: 'QR code already used' })
     }
 
     code.used = true
