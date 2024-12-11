@@ -24,37 +24,37 @@ const QRCodeSchema = new mongoose.Schema({
 const QRCodeModel = mongoose.model('QRCode', QRCodeSchema)
 
 // Generate QR codes
-app.post('/api/generate-codes', async (req, res) => {
-  try {
-    const { amount } = req.body
-    const codes = []
-    const outputDir = path.join(__dirname, 'qrcodes')
+// app.post('/api/generate-codes', async (req, res) => {
+//   try {
+//     const { amount } = req.body
+//     const codes = []
+//     const outputDir = path.join(__dirname, 'qrcodes')
 
-    // Create output directory if it doesn't exist
-    await fs.mkdir(outputDir, { recursive: true })
+//     // Create output directory if it doesn't exist
+//     await fs.mkdir(outputDir, { recursive: true })
 
-    // Get the current highest code number
-    const lastCode = await QRCodeModel.findOne().sort('-codeNumber')
-    let startNumber = lastCode ? lastCode.codeNumber + 1 : 1
+//     // Get the current highest code number
+//     const lastCode = await QRCodeModel.findOne().sort('-codeNumber')
+//     let startNumber = lastCode ? lastCode.codeNumber + 1 : 1
 
-    for (let i = 0; i < amount; i++) {
-      const code = `EVENT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const codeNumber = startNumber + i
+//     for (let i = 0; i < amount; i++) {
+//       const code = `EVENT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+//       const codeNumber = startNumber + i
 
-      // Generate QR code image
-      await QRCode.toFile(path.join(outputDir, `qr-${codeNumber}.png`), code, { width: 300 })
+//       // Generate QR code image
+//       await QRCode.toFile(path.join(outputDir, `qr-${codeNumber}.png`), code, { width: 300 })
 
-      codes.push({ code, codeNumber })
-    }
+//       codes.push({ code, codeNumber })
+//     }
 
-    // Insert all codes into database
-    await QRCodeModel.insertMany(codes)
+//     // Insert all codes into database
+//     await QRCodeModel.insertMany(codes)
 
-    res.json({ success: true, message: `Generated ${amount} QR codes` })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
+//     res.json({ success: true, message: `Generated ${amount} QR codes` })
+//   } catch (error) {
+//     res.status(500).json({ success: false, error: error.message })
+//   }
+// })
 
 // Scan QR code
 app.post('/api/scan', async (req, res) => {
