@@ -95,7 +95,7 @@ app.post('/api/reset-code/:code', async (req, res) => {
 
     res.status(200).json({ success: true, message: 'qr code has been successfully reset. You can use this qr code again to enter' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
