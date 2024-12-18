@@ -1,12 +1,12 @@
 const express = require('express')
-require('dotenv').config();
+require('dotenv').config()
 const mongoose = require('mongoose')
 const QRCode = require('qrcode')
 const cors = require('cors')
 const fs = require('fs').promises
 const path = require('path')
-const XLSX = require('xlsx')
-
+const xlsx = require('node-xlsx')
+const moment = require('moment-timezone')
 
 const app = express()
 app.use(cors())
@@ -17,46 +17,44 @@ mongoose.connect(process.env.MONGODB_URI)
 const QRCodeSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true },
   codeNumber: { type: Number, unique: true },
+  category: { type: String, required: true },
   used: { type: Boolean, default: false },
   usedAt: Date,
 })
 
 const QRCodeModel = mongoose.model('QRCode', QRCodeSchema)
 
-// Generate QR codes
-// app.post('/api/generate-codes', async (req, res) => {
-//   try {
-//     const { amount } = req.body
-//     const codes = []
-//     const outputDir = path.join(__dirname, 'qrcodes')
+app.post('/api/generate-codes', async (req, res) => {
+  try {
+    const { amount, category } = req.body
+    if (!category) {
+      return res.status(400).json({ success: false, message: 'Category is required' })
+    }
 
-//     // Create output directory if it doesn't exist
-//     await fs.mkdir(outputDir, { recursive: true })
+    const codes = []
+    const outputDir = path.join(__dirname, 'qrcodes', category.toLowerCase())
+    await fs.mkdir(outputDir, { recursive: true })
+    const lastCode = await QRCodeModel.findOne().sort('-codeNumber')
+    let startNumber = lastCode ? lastCode.codeNumber + 1 : 1
 
-//     // Get the current highest code number
-//     const lastCode = await QRCodeModel.findOne().sort('-codeNumber')
-//     let startNumber = lastCode ? lastCode.codeNumber + 1 : 1
+    for (let i = 0; i < amount; i++) {
+      const code = `EVENT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      const codeNumber = startNumber + i
+      await QRCode.toFile(path.join(outputDir, `qr-${codeNumber}.png`), code, { width: 300 })
+      codes.push({ code, codeNumber, category })
+    }
 
-//     for (let i = 0; i < amount; i++) {
-//       const code = `EVENT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-//       const codeNumber = startNumber + i
+    await QRCodeModel.insertMany(codes)
+    res.json({
+      success: true,
+      message: `Generated ${amount} QR codes in category ${category}`,
+      directory: outputDir,
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
 
-//       // Generate QR code image
-//       await QRCode.toFile(path.join(outputDir, `qr-${codeNumber}.png`), code, { width: 300 })
-
-//       codes.push({ code, codeNumber })
-//     }
-
-//     // Insert all codes into database
-//     await QRCodeModel.insertMany(codes)
-
-//     res.json({ success: true, message: `Generated ${amount} QR codes` })
-//   } catch (error) {
-//     res.status(500).json({ success: false, error: error.message })
-//   }
-// })
-
-// Scan QR code
 app.post('/api/scan', async (req, res) => {
   try {
     const { qrCode } = req.body
@@ -67,61 +65,86 @@ app.post('/api/scan', async (req, res) => {
     }
 
     if (code.used) {
-      return res.json({ message: 'QR code already used' })
+      return res.json({
+        success: false,
+        message: 'QR code already used',
+        data: {
+          codeNumber: code.codeNumber,
+          category: code.category,
+          used: code.used,
+          usedAt: moment(code.usedAt).tz('Asia/Dhaka').format(),
+        },
+      })
     }
 
     code.used = true
-    code.usedAt = new Date()
+    code.usedAt = moment().tz('Asia/Dhaka').toDate()
     await code.save()
 
-    res.status(200).json({ success: true, message: "access granted, enjoy" })
+    res.status(200).json({
+      success: true,
+      message: 'access granted, enjoy',
+      data: {
+        codeNumber: code.codeNumber,
+        category: code.category,
+        used: code.used,
+        usedAt: moment(code.usedAt).tz('Asia/Dhaka').format(),
+      },
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-// Reset QR code
-app.post('/api/reset-code/:code', async (req, res) => {
+app.post('/api/reset-code', async (req, res) => {
   try {
-    const code = await QRCodeModel.findOne({ code: req.params.code });
+    const { code } = req.body
+    const qrCode = await QRCodeModel.findOne({ code: code })
 
-    if (!code) {
-      return res.status(404).json({ success: false, message: 'Code not found' });
+    if (!qrCode) {
+      return res.status(404).json({ success: false, message: 'Code not found' })
     }
 
-    code.used = false;
-    code.usedAt = null;
-    await code.save();
+    qrCode.used = false
+    qrCode.usedAt = null
+    await qrCode.save()
 
-    res.status(200).json({ success: true, message: 'qr code has been successfully reset. You can use this qr code again to enter' });
+    res.status(200).json({
+      success: true,
+      message: 'qr code has been successfully reset. You can use this qr code again to enter',
+      data: {
+        codeNumber: qrCode.codeNumber,
+        category: qrCode.category,
+        used: qrCode.used,
+        usedAt: null,
+      },
+    })
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message })
   }
-});
-
+})
 
 app.get('/api/export-excel', async (req, res) => {
   try {
     const codes = await QRCodeModel.find({})
 
-    const data = codes.map((code) => ({
-      'Code Number': code.codeNumber,
-      'QR Code': code.code,
-      Used: code.used ? 'Yes' : 'No',
-      'Used At': code.usedAt ? code.usedAt.toLocaleString() : '',
-    }))
+    const data = [
+      ['Code Number', 'Category', 'QR Code', 'Used', 'Used At'], // Headers
+      ...codes.map((code) => [
+        code.codeNumber,
+        code.category,
+        code.code,
+        code.used ? 'Yes' : 'No',
+        code.usedAt ? moment(code.usedAt).tz('Asia/Dhaka').format('YYYY-MM-DD HH:mm:ss') : '',
+      ]),
+    ]
 
-    const workbook = XLSX.utils.book_new()
-    const worksheet = XLSX.utils.json_to_sheet(data)
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'QR Codes')
-
+    const buffer = xlsx.build([{ name: 'QR Codes', data: data }])
     const fileName = `qr-codes-${Date.now()}.xlsx`
     const filePath = path.join(__dirname, fileName)
 
-    // Save to disk
-    XLSX.writeFile(workbook, filePath)
+    await fs.writeFile(filePath, buffer)
 
-    // Send file
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', `attachment; filename=${fileName}`)
     res.sendFile(filePath)
@@ -132,3 +155,4 @@ app.get('/api/export-excel', async (req, res) => {
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+
