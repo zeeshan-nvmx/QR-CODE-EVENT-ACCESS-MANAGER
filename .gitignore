@@ -1,4 +1,4 @@
 ./node_modules
 .env
-temp-server.js
-./qrcodes
+qrcodes/
+*.xlsx
